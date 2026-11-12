@@ -79,6 +79,15 @@ main{max-width:560px;margin:0 auto;padding:14px 14px 40px}
 .np svg{width:15px;height:15px;stroke-width:2.2}
 .np.has{background:var(--cyan);color:#fff;border-color:#075e74;box-shadow:0 0 0 3px rgba(6,182,212,.3)}
 .np:active{transform:scale(.92)}
+/* v1.2: invisible finger-sized tap area around the small note button (about 44 x 44) */
+.np{position:relative}
+.np:after{content:"";position:absolute;left:-8px;right:-6px;top:-7px;bottom:-10px}
+.nbig{display:flex;align-items:center;gap:12px;width:100%;margin-top:10px;padding:14px;min-height:64px;border-radius:14px;border:2px solid #a5f3fc;background:#ecfeff;text-align:left;color:var(--navy)}
+.nbig > svg{width:28px;height:28px;color:var(--cyan);flex:none}
+.nbig .nt{flex:1;min-width:0}
+.nbig .nt b{display:block;font-size:16px}
+.nbig .nt span{display:block;font-size:13.5px;font-weight:600;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nbig:active{background:#cffafe}
 textarea.t{width:100%;min-height:180px;padding:14px;border:2px solid var(--line);border-radius:12px;font-family:inherit;font-size:16px;line-height:1.45;resize:vertical;outline:none}
 textarea.t:focus{border-color:var(--cyan);box-shadow:0 0 0 4px rgba(8,145,178,.15)}
 .saved{font-size:12.5px;color:var(--mute);font-weight:700;margin-top:6px;min-height:18px}
@@ -434,7 +443,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
    */
 (function () {
   'use strict';
-  var VERSION = 'Supervisor Notes 1.0';
+  var VERSION = 'Supervisor Notes 1.1';
   var KEY = 'supnotes.v1';
   var U = window.USM;
 
@@ -719,7 +728,12 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
         var st = STATUS[k];
         h += '<button class="st ' + k + (u.status === k ? ' on' : '') + '" data-act="set" data-s="' + k + '"><span class="sw">' + (st.icon ? icon(st.icon) : '') + '</span>' + st.name + '</button>';
       });
-      h += '</div><div class="foot"><button class="btn" data-act="close">Close</button></div>';
+      h += '</div>';
+      var pts = U.bullets(u.note), dn = U.dueInfo(u.noteDate, TODAY);
+      h += '<button class="nbig" data-act="note" data-c="' + ci + '" data-u="' + ui + '">' + icon('note') +
+        '<span class="nt"><b>' + (pts.length ? 'Notes' : 'Add a note') + '</b><span>' + (pts.length ? esc(pts[0]) + (pts.length > 1 ? ' +' + (pts.length - 1) + ' more' : '') : 'Points, reminders, anything about ' + esc(u.name)) + '</span></span>' +
+        (dn ? dueChip(u.noteDate) : '') + '</button>';
+      h += '<div class="foot"><button class="btn" data-act="close">Close</button></div>';
     } else {
       h += '<label class="f" for="nm">Chiller name</label><input class="t" id="nm" maxlength="20" value="' + esc(u.name) + '" placeholder="e.g. DH2-04">' +
         '<div class="foot"><button class="btn red" id="delBtn" data-act="del">' + icon('trash') + 'Remove</button>' +
