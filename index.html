@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Notes">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b3b6a'/%3E%3Crect x='8' y='8' width='16' height='6' rx='1.5' fill='%2306b6d4'/%3E%3Crect x='8' y='18' width='16' height='6' rx='1.5' fill='%23fff'/%3E%3C/svg%3E">
+<title>Supervisor Notes</title>
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root{
+  --navy:#0b3b6a; --navy2:#0e5a9c; --cyan:#0891b2; --cyan2:#06b6d4; --ink:#0f172a; --ink2:#334155; --mute:#64748b;
+  --line:#e2e8f0; --bg:#f4f7fb; --card:#fff; --ok:#059669; --okbg:#ecfdf5; --warn:#d97706; --warnbg:#fffbeb;
+  --bad:#dc2626; --badbg:#fef2f2; --r:16px;
+  --done:#22a06b; --prog:#f59e0b; --na:#94a3b8;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:0;background:none;color:inherit}
+input{font-family:inherit;font-size:16px;color:var(--ink)}
+.hide{display:none!important}
+svg.i{width:24px;height:24px;flex:none;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- top bar ---------- */
+header{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 2px 10px -6px rgba(15,23,42,.15)}
+.bar{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 14px}
+.bar .mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--navy),var(--navy2));display:grid;place-items:center;color:#fff;flex:none}
+.bar .ttl{flex:1;min-width:0;text-align:left}
+.bar .ttl b{display:block;color:var(--navy);font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .ttl span{display:block;font-size:12.5px;color:var(--mute);font-weight:600}
+.ib{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:var(--navy);border:1px solid var(--line);background:#fff;flex:none}
+.ib:active{background:#eef6fb}
+.ib.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+main{max-width:560px;margin:0 auto;padding:14px 14px 40px}
+
+/* ---------- progress summary ---------- */
+.sum{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;box-shadow:0 4px 14px -10px rgba(15,23,42,.18)}
+.sum .meter{height:10px;border-radius:99px;background:#eef2f7;overflow:hidden;display:flex}
+.sum .meter i{display:block;height:100%;transition:width .4s ease}
+.sum .meter .d{background:var(--done)} .sum .meter .n{background:var(--na)} .sum .meter .p{background:var(--prog)}
+.sum .nums{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:6px;font-weight:800;font-size:13.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.dot{width:12px;height:12px;border-radius:4px;border:2px solid #1f2937}
+.dot.done{background:var(--done)} .dot.prog{background:var(--prog)} .dot.todo{background:#fff} .dot.na{background:var(--na)}
+.sum .pct{margin-left:auto;font-weight:900;color:var(--navy);font-variant-numeric:tabular-nums}
+
+/* ---------- roof map ---------- */
+.roof{position:relative;border-radius:10px;padding:16px 12px 70px;
+  background:
+    radial-gradient(circle at 20% 30%,rgba(0,0,0,.035) 0 2px,transparent 3px) 0 0/22px 22px,
+    radial-gradient(circle at 70% 60%,rgba(255,255,255,.05) 0 2px,transparent 3px) 0 0/31px 31px,
+    linear-gradient(#9a9c9e,#8f9193);
+  border:10px solid #c4c6c8;box-shadow:inset 0 0 0 2px #7d7f81,0 10px 30px -16px rgba(15,23,42,.6)}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9%}
+.col{display:flex;flex-direction:column;gap:14px}
+.unit{position:relative;width:100%;cursor:pointer;user-select:none;transition:transform .1s}
+.unit:active{transform:scale(.98)}
+.ch svg{display:block;width:100%;height:auto;overflow:visible;filter:drop-shadow(3px 6px 4px rgba(0,0,0,.45))}
+.ctrl{position:absolute;left:5%;right:4%;bottom:5%;height:33%;display:flex;align-items:center;gap:4px}
+.unit .lab{flex:1;min-width:0;text-align:center;padding:1px 4px;background:#fff;border:1.5px solid #111;border-radius:3px;
+  font-weight:900;font-size:13px;line-height:1.35;letter-spacing:.2px;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:background .25s,color .25s}
+.unit .sq{width:24px;height:24px;flex:none;border:1.5px solid #111;border-radius:3px;background:#fff;display:grid;place-items:center;color:#fff;transition:background .25s}
+.unit .sq svg{width:15px;height:15px;stroke-width:3}
+.rot{transform-box:fill-box;transform-origin:center}
+.unit.prog .rot{animation:spin .9s linear infinite;animation-delay:var(--ph,0s)}
+.unit.done.pop .rot{animation:spindown 2.6s cubic-bezier(.12,.7,.3,1) 1 forwards}
+.unit.done .ring{stroke:#22c55e}
+.led{fill:#64748b;transition:fill .3s}
+.unit.prog .led{fill:#f59e0b;animation:blink 1s steps(2) infinite}
+.unit.done .led{fill:#22c55e}
+.unit.na .ch svg{filter:grayscale(1) opacity(.6)}
+.np{width:24px;height:24px;flex:none;border:1.5px solid #111;border-radius:3px;background:#fff;display:grid;place-items:center;color:#334155;transition:background .2s,transform .1s}
+.np svg{width:15px;height:15px;stroke-width:2.2}
+.np.has{background:var(--cyan);color:#fff;border-color:#075e74;box-shadow:0 0 0 3px rgba(6,182,212,.3)}
+.np:active{transform:scale(.92)}
+textarea.t{width:100%;min-height:180px;padding:14px;border:2px solid var(--line);border-radius:12px;font-family:inherit;font-size:16px;line-height:1.45;resize:vertical;outline:none}
+textarea.t:focus{border-color:var(--cyan);box-shadow:0 0 0 4px rgba(8,145,178,.15)}
+.saved{font-size:12.5px;color:var(--mute);font-weight:700;margin-top:6px;min-height:18px}
+.unit.done .lab{background:var(--done);color:#fff}
+.unit.done .sq{background:var(--done)}
+.unit.prog .lab{background:var(--prog);color:#111}
+.unit.prog .sq{background:var(--prog);color:#111}
+.unit.na .lab{background:#e2e8f0;color:#475569;text-decoration:line-through;text-decoration-thickness:2px}
+.unit.na .sq{background:var(--na);color:#fff}
+.unit.pop .lab{animation:pop .35s ease}
+.add{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border:2px dashed rgba(255,255,255,.85);border-radius:6px;
+  color:#fff;font-weight:800;font-size:14px;background:rgba(11,59,106,.35)}
+.add svg{width:18px;height:18px}
+.exit{position:absolute;right:16%;bottom:0;display:flex;flex-direction:column;align-items:center}
+.exit .door{width:34px;height:50px;background:#d92b2b;border:2px solid #7a1010;border-bottom:0;border-radius:2px 2px 0 0;position:relative}
+.exit .door:after{content:"";position:absolute;left:6px;top:24px;width:4px;height:4px;border-radius:50%;background:#3a0000}
+.exitlab{position:absolute;right:16%;bottom:6px;transform:translateX(18%);font-weight:900;font-size:20px;color:var(--ink)}
+.roofwrap{padding-bottom:44px;position:relative}
+.banner{display:flex;align-items:center;gap:10px;width:100%;background:#fff;border:1px solid var(--line);border-radius:var(--r);
+  padding:14px;margin-bottom:12px;text-align:left;box-shadow:0 4px 14px -10px rgba(15,23,42,.18)}
+.banner b{flex:1;min-width:0;font-size:24px;font-weight:900;line-height:1.15;color:#111;letter-spacing:-.3px;overflow-wrap:anywhere}
+.banner .pen{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:var(--cyan);background:#ecfeff;flex:none}
+.banner .pen svg{width:20px;height:20px}
+.banner:active{background:#f8fafc}
+.hint{font-size:13px;color:var(--mute);text-align:center;margin:6px 0 0;font-weight:600}
+
+/* ---------- edit bar ---------- */
+.editbar{background:var(--warnbg);border:1px solid #fde68a;color:#92400e;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-weight:700;font-size:14px;display:flex;gap:10px;align-items:center}
+.editbar .grow{flex:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 14px;border-radius:12px;font-weight:800;font-size:15px;background:#f1f5f9;color:var(--ink2)}
+.btn.navy{background:var(--navy);color:#fff}
+.btn.red{background:var(--badbg);color:var(--bad)}
+.btn.armed{background:var(--bad);color:#fff;animation:shake .4s}
+
+/* ---------- sheet ---------- */
+.shade{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fade .15s}
+.sheet{width:100%;max-width:520px;background:#fff;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));animation:up .2s ease}
+@media(min-width:700px){.shade{align-items:center}.sheet{border-radius:22px}}
+.sheet h3{margin:0 0 4px;color:var(--navy);font-size:20px}
+.sheet .sub{color:var(--mute);font-weight:600;font-size:13.5px;margin-bottom:14px}
+label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:14px 0 6px}
+input.t{width:100%;padding:14px;border:2px solid var(--line);border-radius:12px;background:#fff;outline:none}
+input.t:focus{border-color:var(--cyan);box-shadow:0 0 0 4px rgba(8,145,178,.15)}
+.stats{display:grid;gap:8px}
+.st{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;border:2px solid var(--line);font-weight:800;font-size:16px;text-align:left;width:100%}
+.st .sw{width:28px;height:28px;border-radius:6px;border:2.5px solid #111;display:grid;place-items:center}
+.st .sw svg{width:18px;height:18px;stroke-width:3}
+.st.done .sw{background:var(--done);color:#fff} .st.prog .sw{background:var(--prog)} .st.todo .sw{background:#fff} .st.na .sw{background:var(--na);color:#fff}
+.st.on{border-color:var(--navy);background:#eef6fb}
+.st.on:after{content:"Current";margin-left:auto;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--navy)}
+.sheet .foot{display:flex;gap:8px;margin-top:16px}
+.sheet .foot .btn{flex:1}
+
+.toast{position:fixed;left:50%;top:74px;white-space:nowrap;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 16px;border-radius:12px;font-weight:700;font-size:14px;z-index:60;animation:up .2s}
+
+/* ---------- workers ---------- */
+.who{display:inline-grid;place-items:center;min-width:30px;height:24px;padding:0 7px;border-radius:99px;background:var(--navy);color:#fff;
+  font-weight:900;font-size:12px;letter-spacing:.3px;border:2px solid #fff;box-shadow:0 3px 8px -2px rgba(11,59,106,.7);white-space:nowrap}
+.whos{position:absolute;top:-11px;right:-8px;z-index:2;display:flex;animation:bob 2.4s ease-in-out infinite}
+.whos .who{min-width:28px;height:24px;padding:0 5px;font-size:11.5px}
+.whos .who + .who{margin-left:-3px}
+.who.more{background:#fff!important;color:var(--navy);border-color:var(--navy)}
+.key{display:flex;flex-wrap:wrap;gap:6px 14px;margin:6px 2px 12px;font-size:12.5px;font-weight:700;color:var(--ink2)}
+.key span{display:flex;align-items:center;gap:6px}
+.key i{width:12px;height:12px;border-radius:50%;display:block}
+.offl{padding-top:10px}
+.wjob{margin-top:5px}
+.wr .wjob em{font-style:normal;font-size:13px;color:var(--ink2);font-weight:700;margin-left:6px}
+.jt,.wr span.jt{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:12px;font-weight:800;border:1.5px solid;border-radius:6px;padding:0 5px;background:#fff}
+.wline{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-weight:800;font-size:13.5px;color:var(--navy);width:100%;text-align:left}
+.wline svg{width:18px;height:18px;color:var(--cyan)}
+.wline.off{color:var(--cyan)}
+.live{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:6px;vertical-align:1px;animation:pulse 1.8s infinite}
+.wl{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:12px}
+.wlh{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mute);margin-bottom:6px}
+.wr{display:flex;gap:10px;align-items:flex-start;padding:6px 0}
+.wr + .wr{border-top:1px solid var(--line)}
+.wr span.who{border-color:var(--navy);color:#fff;font-size:12px;font-weight:900}
+.wr b{display:block;font-size:15px}
+.wr span{display:block;font-size:13px;color:var(--mute);font-weight:600}
+.wr i{display:block;font-size:13.5px;color:var(--ink2);margin-top:2px}
+.err{color:var(--bad);font-weight:700;font-size:14px;min-height:20px;margin-top:10px}
+.btn:disabled{opacity:.6}
+@keyframes bob{50%{transform:translateY(-2px)}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(5,150,105,.5)}70%{box-shadow:0 0 0 7px rgba(5,150,105,0)}100%{box-shadow:0 0 0 0 rgba(5,150,105,0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes spindown{from{transform:rotate(0)}to{transform:rotate(1080deg)}}
+@keyframes blink{50%{opacity:.25}}
+@keyframes pop{50%{transform:scale(1.06)}}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(24px);opacity:0}}
+@keyframes shake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media(max-width:380px){.unit .lab{font-size:11.5px;letter-spacing:0}.unit .sq,.np{width:20px;height:20px}.unit .sq svg,.np svg{width:13px;height:13px}.ctrl{gap:3px}.cols{gap:6%}}
+
+/* ---------- v1.1 notes you can see on the map + reminder dates ---------- */
+:root{--paper:#fff8c5;--paper2:#fde68a;--paperink:#3b2f04}
+.due{display:inline-flex;align-items:center;gap:4px;font-weight:900;font-size:11px;line-height:1;padding:3px 6px;border-radius:99px;white-space:nowrap;
+  background:#e0f2fe;color:var(--navy);border:1.5px solid #bae6fd;font-variant-numeric:tabular-nums}
+.due svg{width:11px;height:11px;stroke-width:3}
+.due.soon{background:#cffafe;color:#155e75;border-color:var(--cyan2)}
+.due.today{background:var(--prog);color:#111;border-color:#b45309;animation:tick 1.6s ease-in-out infinite}
+.due.late{background:var(--bad);color:#fff;border-color:#991b1b}
+@keyframes tick{50%{box-shadow:0 0 0 4px rgba(245,158,11,.35)}}
+/* sticky-note look */
+.tag{display:block;background:var(--paper);color:var(--paperink);border:1px solid var(--paper2);border-radius:3px;text-align:left;
+  font-size:11.5px;font-weight:700;line-height:1.25;box-shadow:2px 4px 8px -3px rgba(0,0,0,.45);overflow:hidden;cursor:pointer}
+.tag .tx{display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.tag.late{border-left:4px solid var(--bad)} .tag.today{border-left:4px solid var(--prog)}
+/* C: strip under the chiller */
+.sC .tag{margin-top:4px;padding:4px 6px}
+.sC .th{display:flex;align-items:center;gap:5px;min-height:22px}
+.sC .tag .tx{-webkit-line-clamp:1;flex:1;min-width:0}
+.tag .b,.pts li:before{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--paperink);margin:0 5px 2px 1px;vertical-align:middle}
+.pts li:before{content:"";position:absolute;left:2px;top:7px;margin:0}
+.dd{flex:none;display:inline-flex;align-items:center;gap:1px;min-height:26px;min-width:30px;margin:-3px -4px -3px 0;padding:0 4px 0 6px;border-radius:6px;font-weight:900;font-size:11.5px;color:var(--paperink);background:var(--paper2)}
+.dd svg{width:15px;height:15px;stroke-width:3;transition:transform .2s}
+.tag.open .dd svg{transform:rotate(180deg)}
+.pts{list-style:none;margin:4px 0 2px;padding:0;animation:drop .2s ease}
+.pts li{position:relative;padding:3px 0 3px 12px;font-size:12px;line-height:1.3;overflow-wrap:anywhere;border-top:1px dashed rgba(59,47,4,.18)}
+@keyframes drop{from{opacity:0;transform:translateY(-4px)}}
+/* reminders list above the map */
+.rem{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin-bottom:14px;box-shadow:0 4px 14px -10px rgba(15,23,42,.18)}
+.remh{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mute);margin-bottom:4px}
+.remh svg{width:16px;height:16px;color:var(--cyan)}
+.remh .n{margin-left:auto;background:var(--bad);color:#fff;border-radius:99px;padding:1px 7px;font-size:11px;letter-spacing:0}
+.rr{display:flex;align-items:center;gap:8px;width:100%;padding:8px 0;text-align:left;border-top:1px solid var(--line)}
+.rr:first-of-type{border-top:0}
+.rr b{flex:none;font-size:13px;color:var(--navy);min-width:52px}
+.rr span.t{flex:1;min-width:0;font-size:14px;font-weight:600;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rr .due{flex:none}
+.more{width:100%;padding:8px 0 2px;font-weight:800;font-size:13.5px;color:var(--cyan);text-align:center}
+/* date picker in the note sheet */
+.dq{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.dq button{min-height:40px;padding:8px 12px;border-radius:10px;border:2px solid var(--line);font-weight:800;font-size:14px;color:var(--ink2);background:#fff}
+.dq button.on{border-color:var(--navy);background:var(--navy);color:#fff}
+.dq input{min-height:40px;padding:6px 10px;border:2px solid var(--line);border-radius:10px;font-weight:700;background:#fff}
+.dq input.on{border-color:var(--navy)}
+.dline{margin-top:8px;font-size:13px;font-weight:700;color:var(--mute);display:flex;align-items:center;gap:8px}
+/* free notepad: a column beside the map on big screens, a drawer from the right on phones */
+.pad{position:fixed;top:0;right:0;bottom:0;z-index:40;width:min(380px,88vw);background:#fff;border-left:1px solid var(--line);
+  box-shadow:-20px 0 40px -20px rgba(15,23,42,.45);display:flex;flex-direction:column;transform:translateX(105%);transition:transform .25s ease}
+.pad.open{transform:none}
+.padshade{position:fixed;inset:0;z-index:39;background:rgba(15,23,42,.35);animation:fade .15s}
+.padh{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.padh b{flex:1;font-size:18px;color:var(--navy)}
+.padh .ib{width:40px;height:40px}
+.padadd{padding:12px 14px;border-bottom:1px solid var(--line);background:#f8fafc}
+.padadd textarea{min-height:76px}
+.padadd .btn{width:100%;margin-top:10px}
+.padlist{flex:1;overflow:auto;padding:12px 14px 30px;display:flex;flex-direction:column;gap:10px}
+.pn{display:block;width:100%;text-align:left;background:var(--paper);border:1px solid var(--paper2);border-radius:4px;padding:10px 12px;box-shadow:2px 4px 10px -5px rgba(0,0,0,.35);color:var(--paperink)}
+.pn.late{border-left:5px solid var(--bad)} .pn.today{border-left:5px solid var(--prog)}
+.pn p{margin:0;font-size:15px;font-weight:600;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}
+.pn .meta{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;font-weight:700;color:#7c6a1a}
+.pn .meta .due{margin-left:auto}
+.empty{color:var(--mute);font-weight:600;font-size:14px;text-align:center;padding:24px 8px}
+.ib .cnt{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:99px;background:var(--cyan);color:#fff;font-size:11px;font-weight:900;display:grid;place-items:center}
+.ib{position:relative}
+@media(min-width:1000px){
+  body.wide main{max-width:1000px;margin:0 auto;padding-right:400px}
+  .pad{transform:none;top:66px;right:max(14px,calc((100vw - 1000px)/2));bottom:14px;width:370px;border:1px solid var(--line);border-radius:var(--r);box-shadow:0 8px 24px -16px rgba(11,59,106,.35)}
+  .padh .x,.padshade{display:none}
+  #padBtn{display:none}
+}
+
+/* Supervisor Notes: one light look on purpose (site tool, read outdoors) */
+:root{color-scheme:light}
+html,body{background:var(--bg)}
+header{top:env(safe-area-inset-top,0px)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:#fff}
+.bar,main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.pad{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.padh .ib[data-act="copyall"]{color:var(--cyan)}
+.copyall{display:flex;width:100%;margin-top:14px;background:#fff;border:1.5px solid var(--line);color:var(--navy)}
+.copyall svg{color:var(--cyan)}
+.tip{background:#ecfeff;border:1.5px solid #a5f3fc;border-radius:var(--r);padding:12px 14px;margin-bottom:14px;color:var(--ink2)}
+.tip b{color:var(--navy);font-size:15px}
+.tip ul{margin:6px 0 10px;padding-left:18px;font-size:14px;font-weight:600;line-height:1.45}
+.tip .btn{width:100%}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="mark" data-icon="roof"></div>
+    <div class="ttl"><b>Supervisor Notes</b><span>Chillers · reminders</span></div>
+    <button class="ib" id="padBtn" data-act="pad" title="Notepad" aria-label="Notepad"></button>
+    <button class="ib" id="editBtn" data-act="edit" title="Edit layout" data-icon="pencil"></button>
+  </div>
+</header>
+<main id="app"></main>
+<!-- v1.1 free notepad: notes not tied to a chiller -->
+<aside class="pad" id="pad" aria-label="Notepad">
+  <div class="padh"><b>Notepad</b><button class="ib" data-act="copyall" aria-label="Copy all notes" title="Copy all notes" data-icon="copy"></button><button class="ib x" data-act="padclose" aria-label="Close notepad" data-icon="x"></button></div>
+  <div class="padadd">
+    <textarea class="t" id="padNew" maxlength="2000" placeholder="e.g. Order 4 more heater pads for DH2-07"></textarea>
+    <div class="dq" id="padDq" style="margin-top:8px"></div>
+    <button class="btn navy" data-act="padadd" id="padAddBtn">Add note</button>
+  </div>
+  <div class="padlist" id="padList"></div>
+</aside>
+</div>
+<!-- shared paint for every chiller drawing -->
+<svg id="chDefs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="chBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9dde1"/><stop offset="1" stop-color="#aeb4ba"/></linearGradient>
+  <pattern id="chBrush" width="4" height="100" patternUnits="userSpaceOnUse"><path d="M1 0V100" stroke="rgba(255,255,255,.35)" stroke-width=".6"/><path d="M3 0V100" stroke="rgba(0,0,0,.06)" stroke-width=".6"/></pattern>
+</defs></svg>
+
+<script>
+/* Unit Status Map - pure logic (no DOM). Runs in the browser and in Node tests.
+   */
+(function (root) {
+  'use strict';
+  var TZ = 'America/Toronto';
+  var _dateFmt;
+
+  function etDate(ms) {
+    _dateFmt = _dateFmt || new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+    return _dateFmt.format(new Date(ms));
+  }
+
+  // DH2-06 -> "206": the number techs write. Needs 3+ digits so hours like "4" never match.
+  function unitNumber(name) {
+    var d = String(name || '').replace(/\D/g, '');
+    return d.length >= 3 ? d : '';
+  }
+  function squash(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+  // Which unit names a note points at: "206", "DH2-06", "dh2 06", "DH206". Any kind of work (v0.7).
+  function unitsInNote(note, names) {
+    var nums = String(note || '').match(/\d+/g) || [];
+    var flat = squash(note);
+    return names.filter(function (n) {
+      var num = unitNumber(n), sq = squash(n);
+      return (num && nums.indexOf(num) >= 0) || (sq.length >= 4 && flat.indexOf(sq) >= 0);
+    });
+  }
+
+  function initials(name) {
+    var w = String(name || '').split(/[\s.]+/).filter(Boolean);
+    if (!w.length) return '?';
+    if (w.length === 1) return w[0].slice(0, 2).toUpperCase();
+    return (w[0][0] + w[w.length - 1][0]).toUpperCase();
+  }
+
+  var JOB_COLORS = ['#0b3b6a', '#0891b2', '#c2410c', '#be123c', '#0f766e', '#4d7c0f', '#1d4ed8', '#a16207', '#475569', '#0e7490'];
+  function jobColors(jobs) {
+    var out = {};
+    Object.keys(jobs || {}).sort(function (a, b) { return ((jobs[a].sort || 0) - (jobs[b].sort || 0)) || (a < b ? -1 : 1); })
+      .forEach(function (k, i) { out[k] = JOB_COLORS[i % JOB_COLORS.length]; });
+    return out;
+  }
+  function jobInfo(jobs, key) {
+    var j = (jobs || {})[key] || {};
+    return { job: key, code: j.code || '', jobName: j.name || key || '' };
+  }
+
+  // Everyone who logged anything today, split into who is on which unit and who isn't on any.
+  // days: {pid: today's day}, people: {pid:{name,company}}, companies: {id:{name}}, jobs: {key:{code,name}}
+  // -> { byUnit: {unit: [person]}, off: [person] }   person = {pid, name, ini, company, lines:[{job, code, jobName, hours, note}]}
+  // A person on 2 units shows on both; on a unit they only list the lines that name it.
+  function placeWorkers(days, people, companies, jobs, names) {
+    var byUnit = {}, off = [];
+    Object.keys(days || {}).forEach(function (pid) {
+      var d = days[pid], p = (people || {})[pid] || {};
+      if (!d || !d.lines) return;
+      var base = {
+        pid: pid, name: p.name || pid, ini: initials(p.name || pid),
+        company: ((companies || {})[p.company] || {}).name || p.company || ''
+      };
+      var placed = false, all = [];
+      Object.keys(d.lines).forEach(function (k) {
+        var l = d.lines[k], info = jobInfo(jobs, l.job);
+        var line = { job: info.job, code: info.code, jobName: info.jobName, hours: +l.hours || 0, note: l.note || '' };
+        all.push(line);
+        unitsInNote(l.note, names).forEach(function (u) {
+          placed = true;
+          var list = byUnit[u] = byUnit[u] || [];
+          var me = list.filter(function (x) { return x.pid === pid; })[0];
+          if (!me) { me = Object.assign({ lines: [] }, base); list.push(me); }
+          me.lines.push(line);
+        });
+      });
+      if (!placed) off.push(Object.assign({ lines: all }, base));
+    });
+    off.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+    return { byUnit: byUnit, off: off };
+  }
+
+  // How many different people are on units (counted once even on several units)
+  function workerCount(byUnit) {
+    var seen = {};
+    Object.keys(byUnit).forEach(function (u) { byUnit[u].forEach(function (w) { seen[w.pid] = 1; }); });
+    return Object.keys(seen).length;
+  }
+
+  // Job numbers in use on the map today, for the colour key
+  function jobsInUse(byUnit) {
+    var seen = {}, out = [];
+    Object.keys(byUnit).forEach(function (u) {
+      byUnit[u].forEach(function (w) { w.lines.forEach(function (l) { if (!seen[l.job]) { seen[l.job] = 1; out.push(l); } }); });
+    });
+    return out;
+  }
+
+  // ---------- v1.1 reminder dates (YYYY-MM-DD keys, Eastern) ----------
+  var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  function keyMs(k) { var p = String(k).split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]); }
+  function isKey(k) { return /^\d{4}-\d{2}-\d{2}$/.test(String(k || '')) && !isNaN(keyMs(k)); }
+  // Day keys never cross a time zone: plain calendar maths in UTC
+  function addDays(k, n) { var d = new Date(keyMs(k) + n * 864e5); return d.toISOString().slice(0, 10); }
+  function daysBetween(a, b) { return Math.round((keyMs(b) - keyMs(a)) / 864e5); }
+  function shortDate(k) { var d = new Date(keyMs(k)); return MON[d.getUTCMonth()] + ' ' + d.getUTCDate(); }
+  // How a reminder date reads on the map: late (red), today (amber), soon = next 2 days, later
+  function dueInfo(k, today) {
+    if (!isKey(k)) return null;
+    var n = daysBetween(today, k), d = new Date(keyMs(k));
+    if (n < 0) return { cls: 'late', label: 'Late · ' + shortDate(k), days: n };
+    if (n === 0) return { cls: 'today', label: 'Today', days: 0 };
+    if (n === 1) return { cls: 'soon', label: 'Tomorrow', days: 1 };
+    if (n < 7) return { cls: n <= 2 ? 'soon' : 'later', label: WD[d.getUTCDay()] + ' ' + shortDate(k), days: n };
+    return { cls: 'later', label: shortDate(k), days: n };
+  }
+  // Every dated note (chiller notes + free notepad), soonest first
+  // A note as bullet points: one point per line; typed "-", "*", "•" or "1." in front is dropped
+  function bullets(text) {
+    return String(text || '').split(/\r?\n/).map(function (l) { return l.replace(/^\s*(?:[-*]\s+|[•·]\s*|\d+[.)]\s+)/, '').trim(); })
+      .filter(function (l) { return l; });
+  }
+  function reminders(state, today) {
+    var out = [];
+    (state.cols || []).forEach(function (col, ci) {
+      col.forEach(function (u, ui) {
+        if (u.note && u.note.trim() && isKey(u.noteDate)) out.push({ unit: u.name, ci: ci, ui: ui, text: u.note.trim(), date: u.noteDate, due: dueInfo(u.noteDate, today) });
+      });
+    });
+    (state.pad || []).forEach(function (p) {
+      if (p.text && p.text.trim() && isKey(p.date)) out.push({ unit: '', id: p.id, text: p.text.trim(), date: p.date, due: dueInfo(p.date, today) });
+    });
+    return out.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  }
+
+  var api = { TZ: TZ, etDate: etDate, unitNumber: unitNumber, unitsInNote: unitsInNote, initials: initials,
+    jobColors: jobColors, placeWorkers: placeWorkers, workerCount: workerCount, jobsInUse: jobsInUse,
+    isKey: isKey, addDays: addDays, daysBetween: daysBetween, shortDate: shortDate, dueInfo: dueInfo, reminders: reminders, bullets: bullets };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.USM = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
+/* Supervisor Notes 1.0 - notes and reminders for chillers on a roof. Built by build.js.
+   */
+(function () {
+  'use strict';
+  var VERSION = 'Supervisor Notes 1.0';
+  var KEY = 'supnotes.v1';
+  var U = window.USM;
+
+  var IC = {
+    roof: '<path d="M3 21h18"/><path d="M5 21V10l7-5 7 5v11"/><rect x="9" y="12" width="6" height="4" rx="1"/>',
+    pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2 2"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    minus: '<path d="M6 12h12"/>',
+    note: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+    trash: '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>',
+    reset: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+    users: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M16 4a4 4 0 0 1 0 8"/><path d="M22 21a7 7 0 0 0-4-6.3"/>',
+    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
+    copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+    x: '<path d="M6 6l12 12M18 6 6 18"/>',
+    cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    down: '<path d="m6 9 6 6 6-6"/>',
+    bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+    pad: '<path d="M4 4h16v11l-5 5H4Z"/><path d="M15 20v-5h5"/><path d="M8 9h8M8 13h4"/>'
+  };
+  function icon(n) { return '<svg class="i" viewBox="0 0 24 24">' + IC[n] + '</svg>'; }
+  function fillIcons(root) {
+    (root || document).querySelectorAll('[data-icon]').forEach(function (el) { el.innerHTML = icon(el.getAttribute('data-icon')); });
+  }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  var STATUS = {
+    todo: { name: 'Incomplete', icon: '' },
+    prog: { name: 'In progress', icon: 'clock' },
+    na: { name: 'Not required', icon: 'minus' },
+    done: { name: 'Complete', icon: 'check' }
+  };
+
+  function starter() {
+    var L = ['DH2-08', 'DH1-03', 'DH2-03', 'DH3-03', 'DH1-02', 'DH2-02', 'DH3-02', 'DH1-01', 'DH2-01', 'DH3-01'];
+    var R = ['DH2-07', 'DH1-04', 'DH2-04', 'DH3-04', 'DH1-05', 'DH2-05', 'DH3-05', 'DH1-06', 'DH2-06', 'DH3-06'];
+    function mk(n) { return { name: n, status: 'todo' }; }
+    return { title: 'Chillers on Roof', cols: [L.map(mk), R.map(mk)] };
+  }
+
+  var S = load();
+  var EDIT = false, OPEN = null, ARM = '', ARMT = 0, POP = null;
+  var TODAY = U.etDate(Date.now()), PADOPEN = false, PADDATE = '', REMALL = false;
+  var DROP = {}; // which chiller notes are dropped down ('ci-ui' -> true), this visit only
+  if (!S.pad) S.pad = [];
+
+  function load() {
+    try { var s = JSON.parse(localStorage.getItem(KEY)); if (s && s.cols) return s; } catch (e) {}
+    return starter();
+  }
+  // Notes live on this phone (localStorage) and, when the viewer is signed in and allowed,
+  // also in their own private storage (data/users/<id>/notes): nobody else can read it.
+  var CLOUD = null, CLOUDT = 0;
+  function save() {
+    S.savedAt = Date.now();
+    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { if (!CLOUD) toast('Could not save on this phone'); }
+    if (CLOUD) { clearTimeout(CLOUDT); CLOUDT = setTimeout(pushCloud, 800); }
+  }
+  function pushCloud() {
+    if (!CLOUD) return;
+    CLOUD.set({ json: JSON.stringify(S), savedAt: S.savedAt || Date.now() }).catch(function (e) {
+      if (e && e.code === 'unavailable') { CLOUDT = setTimeout(pushCloud, 1500 + Math.random() * 1500); return; }
+      CLOUD = null; render();
+    });
+  }
+  function startCloud() {
+    if (!window.claude || typeof window.claude.use !== 'function') return;
+    Promise.all([window.claude.use('db'), window.claude.use('user')]).then(function (r) {
+      var db = r[0], user = r[1]; if (!db || !user) return;
+      return Promise.all([user.id(), user.can('data.write')]).then(function (a) {
+        if (!a[0] || a[1] === false) return;
+        var ref = db.doc('data/users/' + a[0] + '/notes');
+        return ref.get().then(function (snap) {
+          var d = snap.exists ? snap.data() : null, theirs = null;
+          try { theirs = d && typeof d.json === 'string' ? JSON.parse(d.json) : null; } catch (e) {}
+          if (theirs && theirs.cols && (theirs.savedAt || 0) > (S.savedAt || 0)) {
+            S = theirs; if (!S.pad) S.pad = [];
+            try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+          }
+          CLOUD = ref;
+          // this phone has newer notes than the account: send them up once
+          if (S.savedAt && (!theirs || S.savedAt > (theirs.savedAt || 0))) pushCloud();
+          render();
+        });
+      });
+    }).catch(function () {});
+  }
+
+  function counts() {
+    var c = { todo: 0, prog: 0, done: 0, na: 0, all: 0 };
+    S.cols.forEach(function (col) { col.forEach(function (u) { c[u.status]++; c.all++; }); });
+    return c;
+  }
+
+  function unitNames() {
+    var n = []; S.cols.forEach(function (col) { col.forEach(function (u) { n.push(u.name); }); }); return n;
+  }
+
+  function unitHtml(u, ci, ui) {
+    var st = STATUS[u.status];
+    var pop = POP && POP[0] === ci && POP[1] === ui ? ' pop' : '';
+    var ws = [];
+    // up to 3 overlapping badges, then "+n"
+    var badge = ws.length ? '<span class="whos">' + ws.slice(0, 3).map(function (w) { return whoBadge(w); }).join('') +
+      (ws.length > 3 ? '<span class="who more">+' + (ws.length - 3) + '</span>' : '') + '</span>' : '';
+    // A div, not a button: the notepad button sits inside it and buttons can't be nested
+    var hasNote = !!(u.note && u.note.trim());
+    return '<div class="unit ' + u.status + pop + '" role="button" tabindex="0" data-act="unit" data-c="' + ci + '" data-u="' + ui + '" aria-label="' + esc(u.name) + ': ' + st.name + (ws.length ? ', ' + ws.length + ' on it' : '') + '">' +
+      '<div class="ch">' + CHILLER + '</div>' +
+      '<div class="ctrl"><span class="lab">' + esc(u.name) + '</span>' +
+      '<button class="np' + (hasNote ? ' has' : '') + '" data-act="note" data-c="' + ci + '" data-u="' + ui + '" aria-label="Notes for ' + esc(u.name) + (hasNote ? ' (has a note)' : '') + '">' + icon('note') + '</button>' +
+      '<span class="sq">' + (st.icon ? icon(st.icon) : '') + '</span></div>' + badge + '</div>';
+  }
+
+  function dueChip(k) {
+    var d = U.dueInfo(k, TODAY); if (!d) return '';
+    return '<span class="due ' + d.cls + '">' + icon(d.cls === 'late' ? 'bell' : 'cal') + esc(d.label) + '</span>';
+  }
+  // One bullet per line. Closed: first point + "+n" drop-down button. Open: every point listed.
+  // A div, not a button: the drop-down button sits inside it
+  function noteTag(u, ci, ui) {
+    var pts = U.bullets(u.note); if (!pts.length) return '';
+    var d = U.dueInfo(u.noteDate, TODAY), k = ci + '-' + ui, open = !!DROP[k] && pts.length > 1;
+    var dd = pts.length > 1 ? '<button class="dd" data-act="drop" data-c="' + ci + '" data-u="' + ui + '" aria-expanded="' + open + '" aria-label="' +
+      (open ? 'Hide points' : 'Show all ' + pts.length + ' points') + '">' + (open ? '' : '+' + (pts.length - 1)) + icon('down') + '</button>' : '';
+    return '<div class="tag' + (d ? ' ' + d.cls : '') + (open ? ' open' : '') + '" role="button" tabindex="0" data-act="note" data-c="' + ci + '" data-u="' + ui + '" aria-label="Note on ' + esc(u.name) + '">' +
+      // With a date the chip + button take the top row and the first point gets its own row (phones are narrow)
+      (d ? '<div class="th">' + dueChip(u.noteDate) + '<span class="tx"></span>' + dd + '</div>' +
+        (open ? '' : '<div class="th"><span class="tx"><i class="b"></i>' + esc(pts[0]) + '</span></div>')
+      : '<div class="th"><span class="tx">' + (open ? pts.length + ' points' : '<i class="b"></i>' + esc(pts[0])) + '</span>' + dd + '</div>') +
+      (open ? '<ul class="pts">' + pts.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>' : '') + '</div>';
+  }
+  function slotHtml(u, ci, ui) { return '<div class="slot">' + unitHtml(u, ci, ui) + noteTag(u, ci, ui) + '</div>'; }
+
+  // Reminders above the map: every dated note, soonest first (late ones on top)
+  function remindersHtml() {
+    var rs = U.reminders(S, TODAY); if (!rs.length) return '';
+    var late = rs.filter(function (r) { return r.due.days <= 0; }).length;
+    var show = REMALL ? rs : rs.slice(0, 4);
+    return '<div class="rem"><div class="remh">' + icon('bell') + 'Reminders' + (late ? '<span class="n">' + late + ' due</span>' : '') + '</div>' +
+      show.map(function (r) {
+        var at = r.unit ? 'data-act="note" data-c="' + r.ci + '" data-u="' + r.ui + '"' : 'data-act="padnote" data-id="' + esc(r.id) + '"';
+        return '<button class="rr" ' + at + '>' + dueChip(r.date) + '<b>' + esc(r.unit || 'Notepad') + '</b><span class="t">' + esc(U.bullets(r.text).join(' · ')) + '</span></button>';
+      }).join('') +
+      (rs.length > 4 ? '<button class="more" data-act="remall">' + (REMALL ? 'Show less' : 'Show all ' + rs.length) + '</button>' : '') + '</div>';
+  }
+
+  // ---------- chiller drawing (top view, 200 x 84, 18 fans) ----------
+  // 2 rows of 9 fans in 3 sections, control-panel strip at the bottom where the name/notepad/status sit.
+  // Colours: brushed steel. Gradient + texture live once in #chDefs so every chiller shares them.
+  var STEEL = { seam: 'rgba(60,64,70,.45)', guard: '#2b2f34', ring: '#545a61', blade: '#9aa1a8', hub: '#1c1f23' };
+  // One fan drawn at full size (guard r=18) then scaled down; thicker lines so it still reads when small
+  function fanSvg(cx, cy, s) {
+    var blades = '';
+    for (var i = 0; i < 5; i++) blades += '<path d="M0 0 C3 -5 11 -8 14 -3 C9 -1 4 1 0 0Z" fill="' + STEEL.blade + '" transform="rotate(' + (i * 72) + ')"/>';
+    return '<g transform="translate(' + cx + ' ' + cy + ') scale(' + s + ')"><circle r="18" fill="' + STEEL.guard + '"/>' +
+      // the invisible circle keeps the spin centred on the hub
+      '<g class="rot"><circle r="15" fill="none"/>' + blades + '</g>' +
+      '<circle class="ring" r="15.5" fill="none" stroke="' + STEEL.ring + '" stroke-width="1.6"/>' +
+      '<circle r="3.5" fill="' + STEEL.hub + '" stroke="' + STEEL.ring + '" stroke-width="1.2"/></g>';
+  }
+  var FANS = '';
+  for (var fc = 0; fc < 9; fc++) FANS += fanSvg(16 + fc * 21, 15, .55) + fanSvg(16 + fc * 21, 37, .55);
+  var CHILLER = '<svg viewBox="0 0 200 84" aria-hidden="true">' +
+    '<rect x="1" y="1" width="198" height="82" rx="5" fill="url(#chBody)" stroke="#6b7178" stroke-width="1.5"/>' +
+    '<rect x="1" y="1" width="198" height="82" rx="5" fill="url(#chBrush)"/>' +
+    // seams between the 3 fan sections + the line between the two fan rows
+    '<path d="M68.5 3V49M131.5 3V49" stroke="' + STEEL.seam + '" stroke-width="1.2"/>' +
+    '<path d="M5 26H195" stroke="' + STEEL.seam + '" stroke-width=".6" stroke-opacity=".7"/>' +
+    [[4.5, 4.5], [195.5, 4.5], [4.5, 48], [195.5, 48]].map(function (b) { return '<circle cx="' + b[0] + '" cy="' + b[1] + '" r="1.4" fill="' + STEEL.seam + '"/>'; }).join('') +
+    FANS +
+    '<rect x="5" y="51" width="190" height="29" rx="3" fill="' + STEEL.guard + '" fill-opacity=".18" stroke="' + STEEL.seam + '"/>' +
+    '<circle class="led" cx="196" cy="51" r="2.2"/></svg>';
+
+  function render() {
+    $('editBtn').classList.toggle('on', EDIT);
+    var c = counts(), pd = c.all ? c.done / c.all * 100 : 0, pn = c.all ? c.na / c.all * 100 : 0, pp = c.all ? c.prog / c.all * 100 : 0;
+    var h = '<button class="banner" data-act="title" aria-label="Change title"><b>' + esc(S.title) + '</b><span class="pen">' + icon('pencil') + '</span></button>';
+    if (EDIT) {
+      h += '<div class="editbar"><span class="grow">Editing layout. Tap a chiller to rename or remove it.</span>' +
+        '<button class="btn" data-act="edit">Done</button></div>';
+    }
+    h += '<div class="sum"><div class="meter"><i class="d" style="width:' + pd + '%"></i><i class="n" style="width:' + pn + '%"></i><i class="p" style="width:' + pp + '%"></i></div>' +
+      '<div class="nums">' +
+      '<span class="chip"><span class="dot done"></span>' + c.done + ' Complete</span>' +
+      '<span class="chip"><span class="dot prog"></span>' + c.prog + ' In progress</span>' +
+      '<span class="chip"><span class="dot todo"></span>' + c.todo + ' Incomplete</span>' +
+      (c.na ? '<span class="chip"><span class="dot na"></span>' + c.na + ' Not required</span>' : '') +
+      '<span class="pct">' + Math.round(pd + pn) + '%</span></div>' + '</div>';
+    if (!EDIT && !S.tipDone) h += '<div class="tip"><b>How it works</b><ul>' +
+      '<li>Tap a chiller to mark it Complete, In progress or Not required</li>' +
+      '<li>Tap the note button on a chiller and write one point per line</li>' +
+      '<li>Pick a date and it shows in Reminders until you change it</li>' +
+      '<li>The notepad at the top right is for everything else</li></ul>' +
+      '<button class="btn navy" data-act="tipok">Got it</button></div>';
+    if (!EDIT) h += remindersHtml();
+    // Negative delay = same fan angle as before the redraw, so live updates don't make spinning fans jump
+    h += '<div class="roofwrap sC"><div class="roof" style="--ph:-' + (Date.now() % 900) + 'ms"><div class="cols">';
+    S.cols.forEach(function (col, ci) {
+      h += '<div class="col c' + ci + '">';
+      col.forEach(function (u, ui) { h += slotHtml(u, ci, ui); });
+      if (EDIT) h += '<button class="add" data-act="add" data-c="' + ci + '">' + icon('plus') + 'Add chiller</button>';
+      h += '</div>';
+    });
+    h += '</div><div class="exit"><div class="door"></div></div></div><div class="exitlab">Exit</div></div>';
+    if (EDIT) {
+      h += '<div style="display:flex;gap:8px;margin-top:8px">' +
+        '<button class="btn grow' + (ARM === 'reset' ? ' armed' : '') + '" style="flex:1" data-act="reset">' + icon('reset') + (ARM === 'reset' ? 'Tap again to reset' : 'Set all to Incomplete') + '</button></div>';
+    } else {
+      h += '<button class="btn copyall" data-act="copyall">' + icon('copy') + 'Copy all notes</button>';
+      h += '<p class="hint">Paste them into WhatsApp, a text or an email · tap the pencil at the top to change the chillers</p>';
+    }
+    h += '<p class="hint" style="opacity:.6">' + (CLOUD ? 'Saved to your account (only you can see it)' : 'Saved on this phone only · Copy all notes makes a backup') + '</p>';
+    $('app').innerHTML = h;
+    POP = null;
+    renderPad();
+  }
+
+  // ---------- v1.1 free notepad (S.pad: [{id, text, at, date?}], saved with the layout) ----------
+  function renderPad() {
+    var n = S.pad.filter(function (p) { var d = U.dueInfo(p.date, TODAY); return d && d.days <= 0; }).length;
+    $('padBtn').innerHTML = icon('pad') + (n ? '<span class="cnt">' + n + '</span>' : '');
+    $('pad').classList.toggle('open', PADOPEN);
+    $('padDq').innerHTML = dateQuick(PADDATE, 'paddate');
+    var list = S.pad.slice().sort(function (a, b) { return b.at - a.at; });
+    $('padList').innerHTML = list.length ? list.map(function (p) {
+      var d = U.dueInfo(p.date, TODAY);
+      return '<button class="pn' + (d ? ' ' + d.cls : '') + '" data-act="padnote" data-id="' + esc(p.id) + '"><p>' + esc(p.text) + '</p>' +
+        '<div class="meta">' + esc(NOTEFMT.format(new Date(p.at))) + dueChip(p.date) + '</div></button>';
+    }).join('') : '<div class="empty">No notes yet. Write anything above: parts to order, who to call, things to check.</div>';
+  }
+  function setPad(open) {
+    PADOPEN = open; renderPad();
+    var sh = document.querySelector('.padshade'); if (sh) sh.remove();
+    if (open && window.innerWidth < 1000) {
+      var d = document.createElement('div'); d.className = 'padshade';
+      d.addEventListener('click', function () { setPad(false); });
+      document.body.appendChild(d);
+      setTimeout(function () { $('padNew').focus(); }, 260);
+    }
+  }
+  // Quick date buttons + a calendar box. act = what tapping does; the date travels in data-d
+  function dateQuick(cur, act) {
+    var q = [['', 'No date'], [TODAY, 'Today'], [U.addDays(TODAY, 1), 'Tomorrow'], [U.addDays(TODAY, 7), 'Next week']];
+    var picked = false;
+    var h = q.map(function (x) {
+      var on = cur === x[0]; if (on) picked = true;
+      return '<button type="button" class="' + (on ? 'on' : '') + '" data-act="' + act + '" data-d="' + x[0] + '">' + x[1] + '</button>';
+    }).join('');
+    return h + '<input type="date" aria-label="Pick a date" class="' + (!picked && cur ? 'on' : '') + '" data-dact="' + act + '" value="' + esc(cur || '') + '">';
+  }
+
+  // ---------- sheets ----------
+  function closeSheet() {
+    var s = document.querySelector('.shade'); if (s) s.remove(); OPEN = null; ARM = '';
+    // A notepad note left empty is thrown away
+    if (NT && NT.title === 'Notepad' && !NT.text().trim()) { NT.clear(); save(); render(); }
+    NT = null;
+  }
+  function sheet(html) {
+    closeSheet();
+    var d = document.createElement('div');
+    d.className = 'shade'; d.innerHTML = '<div class="sheet">' + html + '</div>';
+    d.addEventListener('click', function (e) { if (e.target === d) closeSheet(); });
+    document.body.appendChild(d);
+    return d;
+  }
+
+  function openUnit(ci, ui) {
+    var u = S.cols[ci][ui];
+    var h = '<h3>' + esc(u.name) + '</h3><div class="sub">' + (ci === 0 ? 'Left' : 'Right') + ' row, #' + (ui + 1) + ' from the top</div>';
+    if (!EDIT) {
+      var ws = [];
+      if (ws.length) {
+        h += '<div class="wl"><div class="wlh">On this unit today</div>' + ws.map(personRow).join('') + '</div>';
+      }
+      h += '<div class="stats">';
+      ['done', 'prog', 'todo', 'na'].forEach(function (k) {
+        var st = STATUS[k];
+        h += '<button class="st ' + k + (u.status === k ? ' on' : '') + '" data-act="set" data-s="' + k + '"><span class="sw">' + (st.icon ? icon(st.icon) : '') + '</span>' + st.name + '</button>';
+      });
+      h += '</div><div class="foot"><button class="btn" data-act="close">Close</button></div>';
+    } else {
+      h += '<label class="f" for="nm">Chiller name</label><input class="t" id="nm" maxlength="20" value="' + esc(u.name) + '" placeholder="e.g. DH2-04">' +
+        '<div class="foot"><button class="btn red" id="delBtn" data-act="del">' + icon('trash') + 'Remove</button>' +
+        '<button class="btn navy" data-act="rename">Save</button></div>';
+    }
+    sheet(h);
+    OPEN = [ci, ui]; // after sheet(): sheet() closes any old sheet, which clears OPEN
+  }
+
+  function setTitle(t) {
+    S.title = t;
+    save(); closeSheet(); render(); toast('Title: ' + t);
+  }
+
+  // ---------- notepad per chiller (u.note, u.noteAt: optional fields, saved with the layout) ----------
+  var NOTEFMT = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  function noteWhen(u) { return u.noteAt ? 'Last changed ' + NOTEFMT.format(new Date(u.noteAt)) : 'Saves as you type'; }
+
+  // One note editor for both kinds: a chiller note (u.note/noteAt/noteDate) or a notepad note (p.text/at/date)
+  var NT = null;
+  function unitNote(ci, ui) {
+    var u = S.cols[ci][ui];
+    return { title: 'Notes · ' + u.name, ph: 'e.g.\nFan contactor replaced\nWaiting on part for heater pad\nCall Ibrahim with run test sheet',
+      text: function () { return u.note || ''; }, at: function () { return u.noteAt; }, date: function () { return u.noteDate || ''; },
+      setText: function (v) { u.note = v; u.noteAt = Date.now(); },
+      setDate: function (d) { if (d) u.noteDate = d; else delete u.noteDate; },
+      clear: function () { delete u.note; delete u.noteAt; delete u.noteDate; return 'Note cleared · ' + u.name; } };
+  }
+  function padNote(id) {
+    var p = S.pad.filter(function (x) { return x.id === id; })[0]; if (!p) return null;
+    return { title: 'Notepad', ph: 'e.g. Order 4 more heater pads for DH2-07',
+      text: function () { return p.text; }, at: function () { return p.at; }, date: function () { return p.date || ''; },
+      setText: function (v) { p.text = v; p.at = Date.now(); },
+      setDate: function (d) { if (d) p.date = d; else delete p.date; },
+      clear: function () { S.pad.splice(S.pad.indexOf(p), 1); return 'Note deleted'; } };
+  }
+  function noteWhenT(t) { return t.at() ? 'Last changed ' + NOTEFMT.format(new Date(t.at())) : 'Saves as you type'; }
+  function dateLine(t) { var d = U.dueInfo(t.date(), TODAY); return d ? 'Reminder ' + dueChip(t.date()) : 'No reminder date'; }
+
+  function openNote(ci, ui) { openNoteT(unitNote(ci, ui)); OPEN = [ci, ui]; }
+  function openNoteT(t) {
+    if (!t) return;
+    var isPad = t.title === 'Notepad';
+    sheet('<h3>' + esc(t.title) + '</h3><div class="sub">' + (isPad ? 'Saved on this device as you type' : 'One point per line · saved on this device as you type') + '</div>' +
+      '<textarea class="t" id="nt" maxlength="2000" placeholder="' + esc(t.ph) + '">' + esc(t.text()) + '</textarea>' +
+      '<div class="saved" id="ntw">' + esc(noteWhenT(t)) + '</div>' +
+      '<label class="f">Remind me on</label><div class="dq" id="ntdq">' + dateQuick(t.date(), 'notedate') + '</div>' +
+      '<div class="dline" id="ntdl">' + dateLine(t) + '</div>' +
+      '<div class="foot"><button class="btn red" id="clrBtn" data-act="noteclear">' + icon('trash') + (isPad ? 'Delete' : 'Clear') + '</button>' +
+      '<button class="btn navy" data-act="close">Done</button></div>');
+    NT = t;
+    var ta = $('nt');
+    ta.addEventListener('input', function () {
+      t.setText(ta.value);
+      save(); render();
+      $('ntw').textContent = noteWhenT(t);
+    });
+    if (!isPad || !t.text()) setTimeout(function () { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 50);
+  }
+  function setNoteDate(d) {
+    if (!NT) return;
+    NT.setDate(d); save(); render();
+    $('ntdq').innerHTML = dateQuick(NT.date(), 'notedate');
+    $('ntdl').innerHTML = dateLine(NT);
+  }
+
+  function openTitle() {
+    sheet('<h3>Change title</h3><div class="sub">Shown at the top of the roof map</div>' +
+      '<label class="f" for="tt">Type a title</label><input class="t" id="tt" maxlength="60" value="' + esc(S.title) + '" placeholder="e.g. Vacuuming">' +
+      '<div class="foot"><button class="btn" data-act="close">Cancel</button><button class="btn navy" data-act="savetitle">Save</button></div>');
+    setTimeout(function () { var i = $('tt'); if (i) { i.focus(); i.select(); } }, 50);
+  }
+
+  function toast(msg) {
+    var t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+    document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2200);
+  }
+
+  function arm(name) {
+    ARM = name; clearTimeout(ARMT);
+    ARMT = setTimeout(function () {
+      ARM = ''; render();
+      var b = $('delBtn'); if (b) { b.classList.remove('armed'); b.innerHTML = icon('trash') + 'Remove'; }
+      var c = $('clrBtn'); if (c) { c.classList.remove('armed'); c.innerHTML = icon('trash') + 'Clear'; }
+    }, 5000);
+  }
+
+  function allNotesText() {
+    var L = [S.title + ' · notes · ' + U.shortDate(TODAY)];
+    S.cols.forEach(function (col) {
+      col.forEach(function (u) {
+        var pts = U.bullets(u.note); if (!pts.length) return;
+        var d = U.dueInfo(u.noteDate, TODAY);
+        L.push('', u.name + ' (' + STATUS[u.status].name + ')' + (d ? ' · ' + d.label : ''));
+        pts.forEach(function (p) { L.push('• ' + p); });
+      });
+    });
+    if (S.pad.length) {
+      L.push('', 'Notepad');
+      S.pad.slice().sort(function (a, b) { return b.at - a.at; }).forEach(function (p) {
+        var d = U.dueInfo(p.date, TODAY);
+        L.push('• ' + U.bullets(p.text).join(' / ') + (d ? ' (' + d.label + ')' : ''));
+      });
+    }
+    return L.length > 1 ? L.join('\n') : '';
+  }
+  function copyAll() {
+    var t = allNotesText();
+    if (!t) { toast('No notes yet'); return; }
+    function show() {
+      sheet('<h3>All notes</h3><div class="sub">Select all and copy, then paste it anywhere</div>' +
+        '<textarea class="t" id="cpy" readonly>' + esc(t) + '</textarea><div class="foot"><button class="btn navy" data-act="close">Done</button></div>');
+      setTimeout(function () { var a = $('cpy'); if (a) { a.focus(); a.select(); } }, 50);
+    }
+    try {
+      navigator.clipboard.writeText(t).then(function () { toast('Copied · paste it into WhatsApp or a text'); }, show);
+    } catch (e) { show(); }
+  }
+
+  // ---------- events ----------
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-act]'); if (!el) return;
+    var act = el.getAttribute('data-act');
+    var ci = +el.getAttribute('data-c'), ui = +el.getAttribute('data-u');
+    if (act === 'unit') openUnit(ci, ui);
+    else if (act === 'close') closeSheet();
+    else if (act === 'set') {
+      var u = S.cols[OPEN[0]][OPEN[1]];
+      u.status = el.getAttribute('data-s'); POP = OPEN.slice();
+      save(); closeSheet(); render();
+      toast(u.name + ': ' + STATUS[u.status].name);
+    }
+    else if (act === 'edit') { EDIT = !EDIT; ARM = ''; render(); }
+    else if (act === 'title') openTitle();
+    else if (act === 'savetitle') {
+      var t = $('tt').value.trim(); if (!t) { toast('Type a title'); return; }
+      setTitle(t);
+    }
+    else if (act === 'rename') {
+      var n = $('nm').value.trim(); if (!n) { toast('Type a name'); return; }
+      S.cols[OPEN[0]][OPEN[1]].name = n; save(); closeSheet(); render();
+    }
+    else if (act === 'note') openNote(ci, ui);
+    else if (act === 'noteclear') {
+      if (ARM !== 'noteclear') { arm('noteclear'); el.classList.add('armed'); el.innerHTML = icon('trash') + 'Tap again'; return; }
+      var msg = NT.clear(); NT = null;
+      save(); closeSheet(); render(); toast(msg);
+    }
+    else if (act === 'notedate') setNoteDate(el.getAttribute('data-d'));
+    else if (act === 'paddate') { PADDATE = el.getAttribute('data-d'); renderPad(); }
+    else if (act === 'padadd') {
+      var tx = $('padNew').value.trim(); if (!tx) { toast('Write a note first'); $('padNew').focus(); return; }
+      var p = { id: 'p' + Date.now().toString(36), text: tx, at: Date.now() }; if (PADDATE) p.date = PADDATE;
+      S.pad.push(p); $('padNew').value = ''; PADDATE = '';
+      save(); render(); toast(p.date ? 'Note added · ' + U.dueInfo(p.date, TODAY).label : 'Note added');
+    }
+    else if (act === 'padnote') openNoteT(padNote(el.getAttribute('data-id')));
+    else if (act === 'pad') setPad(!PADOPEN);
+    else if (act === 'padclose') setPad(false);
+    else if (act === 'drop') { var dk = ci + '-' + ui; if (DROP[dk]) delete DROP[dk]; else DROP[dk] = true; render(); }
+    else if (act === 'copyall') copyAll();
+    else if (act === 'tipok') { S.tipDone = true; save(); render(); }
+    else if (act === 'remall') { REMALL = !REMALL; render(); }
+
+    else if (act === 'del') {
+      if (ARM !== 'del') { arm('del'); el.classList.add('armed'); el.innerHTML = icon('trash') + 'Tap again'; return; }
+      var gone = S.cols[OPEN[0]].splice(OPEN[1], 1)[0];
+      save(); closeSheet(); render(); toast('Removed ' + gone.name);
+    }
+    else if (act === 'add') {
+      var col = S.cols[ci];
+      col.push({ name: 'NEW-' + (col.length + 1), status: 'todo' });
+      save(); render(); openUnit(ci, col.length - 1);
+      setTimeout(function () { var i = $('nm'); if (i) { i.focus(); i.select(); } }, 50);
+    }
+    else if (act === 'reset') {
+      if (ARM !== 'reset') { arm('reset'); render(); return; }
+      ARM = ''; S.cols.forEach(function (c) { c.forEach(function (u) { u.status = 'todo'; }); });
+      save(); render(); toast('All set to Incomplete');
+    }
+  });
+  // The calendar box: picking a date fires "change"
+  document.addEventListener('change', function (e) {
+    var a = e.target.getAttribute && e.target.getAttribute('data-dact'); if (!a) return;
+    var v = U.isKey(e.target.value) ? e.target.value : '';
+    if (a === 'notedate') setNoteDate(v); else { PADDATE = v; renderPad(); }
+  });
+  // Past midnight: dates move from "Tomorrow" to "Today" by themselves
+  setInterval(function () { var t = U.etDate(Date.now()); if (t !== TODAY) { TODAY = t; render(); } }, 60000);
+  document.body.classList.add('wide');
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { if (document.querySelector('.shade')) closeSheet(); else if (PADOPEN) setPad(false); }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && (e.target.classList.contains('unit') || e.target.classList.contains('tag'))) { e.preventDefault(); e.target.click(); }
+    if (e.key === 'Enter' && $('nm') && !$('lf')) document.querySelector('[data-act="rename"]').click();
+    if (e.key === 'Enter' && $('tt')) document.querySelector('[data-act="savetitle"]').click();
+  });
+
+  fillIcons();
+  $('padAddBtn').innerHTML = icon('plus') + 'Add note';
+  render();
+  startCloud();
+})();
+</script>
+</body>
+</html>
